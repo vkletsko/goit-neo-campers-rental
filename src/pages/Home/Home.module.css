@@ -1,0 +1,52 @@
+.main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: -1;
+
+    width: 100dvw;
+    height: 100%;
+    border-bottom: 1px solid var(--Badges, #f2f4f7);
+    background-color: #332619;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+    background-image: url('/home/img@1x.jpg');
+    background-image: image-set(url('/home/img@1x.webp') 1x);
+    background-image: image-set(url('/home/img@1x.avif') 1x);
+  }
+}
+
+@media (min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .main::after {
+    background-image: url('/home/img@2x.jpg');
+    background-image: image-set(url('/home/img@2x.webp') 2x);
+    background-image: image-set(url('/home/img@2x.avif') 2x);
+  }
+}
+.title {
+  margin-bottom: 1rem;
+  /* H1 */
+  font-size: 48px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 32px; /* 66.667% */
+  color: var(--Inputs, #f7f7f7);
+}
+.slogan {
+  margin-bottom: 40px;
+  /* H2 */
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 32px; /* 133.333% */
+  color: var(--Inputs, #f7f7f7);
+}
