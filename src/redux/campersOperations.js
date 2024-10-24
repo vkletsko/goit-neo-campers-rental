@@ -1,103 +1,72 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
+import toast from 'react-hot-toast';
 import axios from 'axios';
 import { BASE_URL, PER_PAGE } from '@utils/constants/apiConfig';
+import { filterFalseValues } from '@utils/helpers/filterFalseValues';
 
 axios.defaults.baseURL = BASE_URL;
 
-export const fetchCampers = createAsyncThunk(
-  'campers/fetchAll',
-  async (_, thunkAPI) => {
-    try {
-      const response = await axios.get(
-        `${BASE_URL}/campers?page=1&limit=${PER_PAGE}`
-      );
-      return response.data;
-    } catch (error) {
-      return thunkAPI.rejectWithValue(error.message);
+const handleRequest = async (url, errorMessage) => {
+  try {
+    const response = await axios.get(url);
+    if (response.status !== 200) {
+      throw new Error(errorMessage);
     }
-
-    // const { campers, filters } = thunkAPI.getState();
-    // const filteredCampers = [...campers.items];
-    // const allFilters = filters.allFilters;
-    // let currentPageAPI = campers.currentPageAPI;
-    // const currentPage = campers.currentPage;
-    // let isLastPage = false;
-
-    // try {
-    //   if (filteredCampers.length < currentPage * PER_PAGE) {
-    //     while (true) {
-    //       const response = await axios.get(
-    //         `/campers?page=${currentPageAPI}&limit=${PER_PAGE}${formatTypeQueryParam(
-    //           allFilters.typeFilter
-    //         )}${formatEquipmentQueryParam(
-    //           allFilters.equipmentFilter,
-    //           'transmission'
-    //         )}${formatEquipmentQueryParam(
-    //           allFilters.equipmentFilter,
-    //           'ac'
-    //         )}${formatEquipmentQueryParam(
-    //           allFilters.equipmentFilter,
-    //           'kitchen'
-    //         )}${formatEquipmentQueryParam(
-    //           allFilters.equipmentFilter,
-    //           'tv'
-    //         )}${formatEquipmentQueryParam(
-    //           allFilters.equipmentFilter,
-    //           'bathroom'
-    //         )}`
-    //       );
-
-    //       for (let i = 0; i < response.data.items.length; i++) {
-    //         let matchFilters = true;
-
-    //         if (
-    //           allFilters.locationFilter !== '' &&
-    //           !response.data.items[i].location
-    //             .toLowerCase()
-    //             .includes(allFilters.locationFilter)
-    //         ) {
-    //           matchFilters = false;
-    //         }
-
-    //         if (matchFilters) {
-    //           filteredCampers.push(response.data.items[i]);
-    //         }
-    //       }
-
-    //       currentPageAPI += 1;
-
-    //       if (response.data.total <= PER_PAGE * (currentPageAPI - 1)) {
-    //         isLastPage = true;
-    //         break;
-    //       }
-
-    //       if (filteredCampers.length >= PER_PAGE * currentPage) {
-    //         break;
-    //       }
-    //     }
-    //   }
-
-    //   return {
-    //     items: filteredCampers,
-    //     currentPageAPI,
-    //     isLastPage:
-    //       (isLastPage &&
-    //         filteredCampers.length > PER_PAGE * (currentPage - 1) &&
-    //         filteredCampers.length <= PER_PAGE * currentPage) ||
-    //       filteredCampers.length === 0,
-    //   };
-    // } catch (error) {
-    //   return thunkAPI.rejectWithValue(error.message);
-    // }
+    return response;
+  } catch (error) {
+    toast.error(errorMessage);
+    throw error;
   }
-);
+};
 
-export const fetchFilteredCampers = createAsyncThunk(
-  'campers/fetchFilteredCampers',
-  async (_, thunkAPI) => {
+const checkEndOfCollection = (total, page) => {
+  const totalPages = Math.ceil(total / PER_PAGE);
+  return page >= totalPages || totalPages === 1;
+};
+
+export const fetchCampers = createAsyncThunk(
+  'campers/fetchCampers',
+  async ({ filters, isNextPage = false }, thunkAPI) => {
+    const {
+      campers: { page, items },
+    } = thunkAPI.getState();
+
+    const currentPage = isNextPage ? page + 1 : page;
+
     try {
-      const response = await axios.get();
-      return response.data;
+      const filteredParams = filterFalseValues(filters);
+      const params = new URLSearchParams(filteredParams);
+      const url = `/campers?page=${currentPage}&limit=${PER_PAGE}&${params}`;
+      const response = await handleRequest(
+        url,
+        'No campers matching your search query.'
+      );
+
+      const isEndOfCollection = checkEndOfCollection(
+        response.data.total,
+        currentPage
+      );
+
+      if (!response.data.total) {
+        toast.error('No campers matching your search query.');
+        return { items: [], page: currentPage, isEndOfCollection };
+      }
+      if (isEndOfCollection && isNextPage) {
+        toast.success('End of collection.');
+      }
+      if (!isNextPage) {
+        toast.success(`Hooray ✨ We found ${response.data.total} campers.`);
+      }
+
+      const newItems = isNextPage
+        ? [...items, ...response.data.items]
+        : response.data.items;
+
+      return {
+        items: newItems,
+        page: currentPage,
+        isEndOfCollection,
+      };
     } catch (error) {
       return thunkAPI.rejectWithValue(error.message);
     }

@@ -5,18 +5,24 @@ const filtersSlice = createSlice({
   initialState: {
     filters: {
       location: '',
-      form: '',
-      equipment: [],
+      form: null,
+      transmission: false,
+      AC: false,
+      TV: false,
+      bathroom: false,
+      kitchen: false,
     },
   },
   reducers: {
-    changeFilter(state, action) {
-      const { filterType, value } = action.payload;
-      state.filters[filterType] =
-        filterType === 'location' ? value.trim().toLowerCase() : value;
+    updateFilters: (state, action) => {
+      state.filters = {
+        ...action.payload,
+      };
     },
   },
 });
+
+export const { updateLocation, updateFilters } = filtersSlice.actions;
 
 export const { changeFilter } = filtersSlice.actions;
 export const filtersReducer = filtersSlice.reducer;
