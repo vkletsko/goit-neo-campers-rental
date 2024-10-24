@@ -1,64 +1,96 @@
-import { NavLink, Outlet, useParams } from 'react-router-dom';
-import clsx from 'clsx';
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
+import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
+import 'react-tabs/style/react-tabs.css';
 
-import { Overview, Picture, Description, BookingForm } from '@components';
+import { NotFound } from '@pages';
+import {
+  Overview,
+  Picture,
+  Description,
+  BookingForm,
+  Features,
+  Reviews,
+} from '@components';
+import { fetchCamperById } from '@redux/campersOperations';
+import {
+  selectLoading,
+  selectError,
+  selectCamperDetails,
+} from '@redux/campersSelectors';
+import { clearCamperDetails } from '@redux/campersSlice';
 
 import css from './Details.module.css';
-import details from './fakeCamper.json';
-
-const navLinkClass = ({ isActive }) =>
-  clsx(css.link, isActive ? css.active : '');
 
 export default function Details() {
   const { id } = useParams();
-  console.log(details);
+  const dispatch = useDispatch();
+  const camper = useSelector(selectCamperDetails);
+  const loading = useSelector(selectLoading);
+  const error = useSelector(selectError);
+  const isValidId = id => /^[0-9]+$/.test(id);
 
-  // Fetch camper by id
-  // useEffect(() => {
-  //   async function getCamper() {
-  //     const response = await fetch(
-  //       `https://66b1f8e71ca8ad33d4f5f63e.mockapi.io/campers/${id}`
-  //     );
-  //     const details = await response.json();
-  //     setCamper(details);
-  //   }
-  //   getCamper();
-  // }, [id]);
+  useEffect(() => {
+    if (!isValidId(id)) {
+      console.log('Invalid ID, cancelling request');
+      return;
+    }
+
+    dispatch(fetchCamperById(id));
+
+    return () => {
+      dispatch(clearCamperDetails());
+    };
+  }, [dispatch, id]);
+
+  if (!isValidId(id)) {
+    return <NotFound path="/catalog" pageName="Catalog" />;
+  }
+
+  if (!camper || loading) {
+    return <p>Loading...</p>;
+  }
+
+  if (error) {
+    return <p>Oops! We have some error</p>;
+  }
 
   return (
     <main className={css.details}>
       <Overview
-        location={details.location}
-        name={details.name}
-        price={details.price}
-        reviews={details.reviews}
-        rating={details.rating}
+        location={camper?.location}
+        name={camper?.name}
+        price={camper?.price}
+        reviews={camper?.reviews}
+        rating={camper?.rating}
       />
 
       <ul className={css.gallery}>
-        {details?.gallery?.length > 0 &&
-          details.gallery.map((item, idx) => (
+        {camper?.gallery?.length > 0 &&
+          camper.gallery.map((item, idx) => (
             <li key={idx}>
-              <Picture poster={item} alt={details.name} />
+              <Picture poster={item} alt={camper.name} />
             </li>
           ))}
       </ul>
 
-      <Description description={details.description} />
+      <Description description={camper?.description} />
 
-      <nav className={css.nav}>
-        <NavLink className={navLinkClass} to="./" end>
-          Features
-        </NavLink>
-        <NavLink className={navLinkClass} to="reviews">
-          Reviews
-        </NavLink>
-      </nav>
+      <Tabs className={css.wrapper}>
+        <TabList>
+          <Tab>Features</Tab>
+          <Tab>Reviews</Tab>
+        </TabList>
 
-      <div className={css.wrapper}>
-        <Outlet />
-        <BookingForm />
-      </div>
+        <TabPanel>
+          <Features />
+        </TabPanel>
+        <TabPanel>
+          <Reviews />
+        </TabPanel>
+        <BookingForm camperId={id} />
+      </Tabs>
     </main>
   );
 }
